@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommender</title>
+    <style>
+        .movie-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .movie-card {
+            width: 150px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            padding: 5px;
+            border-radius: 10px;
+        }
+        .movie-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+        .movie-title {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .selected {
+            border: 2px solid #28a745;
+            background-color: #e6ffe6;
+        }
+        .btn {
+            margin-top: 15px;
+            padding: 8px 15px;
+            cursor: pointer;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 40%;
+            text-align: center;
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .recommendation-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .recommended-card {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            width: 120px;
+        }
+        .add-movie-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Movie Recommender</h1>
+
+
+    <div class="movie-container">
+        {% for img, title in images %}
+        <div class="movie-card" onclick="toggleSelection(this, '{{ title }}')">
+            <img src="{{ url_for('get_image', filename=img) }}" 
+                 onerror="this.onerror=null; this.src='/images/default.jpg';"
+                 alt="{{ title }}">
+            <p class="movie-title">{{ title }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <button class="btn" onclick="submitSelection()">Get Recommendations</button>
+ <!-- Add Movie Button -->
+ <button class="add-movie-btn" onclick="window.location.href='/add_movie'">Add New Movie</button>
+
+    <!-- Modal for Recommendations -->
+    <div id="recommendationModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Recommended Movies:</h2>
+            <div class="recommendation-list" id="recommendation-list"></div>
+        </div>
+    </div>
+
+    <script>
+        let selectedMovies = [];
+
+        function toggleSelection(element, movieTitle) {
+            if (selectedMovies.includes(movieTitle)) {
+                selectedMovies = selectedMovies.filter(title => title !== movieTitle);
+                element.classList.remove("selected");
+            } else {
+                selectedMovies.push(movieTitle);
+                element.classList.add("selected");
+            }
+        }
+
+        function submitSelection() {
+            if (selectedMovies.length === 0) {
+                alert("Please select at least one movie before getting recommendations.");
+                return;
+            }
+
+            fetch('/recommend', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ selected_movies: selectedMovies })
+            })
+            .then(response => response.json())
+            .then(data => {
+                let recommendationList = document.getElementById('recommendation-list');
+                recommendationList.innerHTML = "";  // Clear previous results
+                data.recommended_movies.forEach(movie => {
+                    let listItem = document.createElement('div');
+                    listItem.classList.add("recommended-card");
+                    listItem.textContent = movie;
+                    recommendationList.appendChild(listItem);
+                });
+
+                // Show the modal
+                document.getElementById("recommendationModal").style.display = "block";
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function closeModal() {
+            document.getElementById("recommendationModal").style.display = "none";
+        }
+
+        // Close modal if user clicks outside of it
+        window.onclick = function(event) {
+            let modal = document.getElementById("recommendationModal");
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
